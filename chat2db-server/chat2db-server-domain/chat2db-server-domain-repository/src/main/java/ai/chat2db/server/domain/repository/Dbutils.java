@@ -145,7 +145,7 @@ public class Dbutils {
         HikariDataSource dataSource = new HikariDataSource();
         String environment = StringUtils.defaultString(System.getProperty("spring.profiles.active"), "dev");
         if ("dev".equalsIgnoreCase(environment)) {
-            dataSource.setJdbcUrl("jdbc:h2:file:~/.chat2db/db/chat2db_dev;MODE=MYSQL");
+            dataSource.setJdbcUrl("jdbc:h2:file:~/.chat2db/db/chat2db_dev;MODE=MYSQL;FILE_LOCK=NO");
         }else if ("test".equalsIgnoreCase(environment)) {
             dataSource.setJdbcUrl("jdbc:h2:file:~/.chat2db/db/chat2db_test;MODE=MYSQL");
         }else {

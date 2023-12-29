@@ -1,6 +1,7 @@
 package ai.chat2db.server.web.api.controller.ai.rest.client;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -9,6 +10,8 @@ import ai.chat2db.server.web.api.controller.ai.rest.model.RestAiCompletion;
 import cn.hutool.http.ContentType;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.unfbx.chatgpt.entity.chat.ChatCompletion;
+import com.unfbx.chatgpt.entity.chat.Message;
 import com.unfbx.chatgpt.sse.ConsoleEventSourceListener;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +40,9 @@ public class RestAiStreamClient {
     @Getter
     private String apiUrl;
 
+    @Getter
+    private String model;
+
     /**
      * 是否流式接口
      */
@@ -53,9 +59,10 @@ public class RestAiStreamClient {
      *
      * @param url
      */
-    public RestAiStreamClient(String url, Boolean stream) {
+    public RestAiStreamClient(String url, Boolean stream, String model) {
         this.apiUrl = url;
         this.stream = stream;
+        this.model = model;
         this.okHttpClient = new OkHttpClient
             .Builder()
             .connectTimeout(10, TimeUnit.SECONDS)
@@ -75,6 +82,21 @@ public class RestAiStreamClient {
         log.info("开始调用自定义AI, prompt:{}", prompt);
         RestAiCompletion completion = new RestAiCompletion();
         completion.setPrompt(prompt);
+        completion.setModel("atom");
+        if (Objects.isNull(stream) || stream) {
+            streamCompletions(completion, eventSourceListener);
+            log.info("结束调用流式输出自定义AI");
+            return;
+        }
+        nonStreamCompletions(completion, eventSourceListener);
+        log.info("结束调用非流式输出自定义AI");
+    }
+
+    public void restCompletions(List<Message> messages,
+                                EventSourceListener eventSourceListener) {
+        log.info("开始调用自定义AI, message:{}", messages);
+        RestAiCompletion completion =RestAiCompletion.builder().messages(messages).stream(stream)
+                .model(model).build();
         if (Objects.isNull(stream) || stream) {
             streamCompletions(completion, eventSourceListener);
             log.info("结束调用流式输出自定义AI");
@@ -96,10 +118,10 @@ public class RestAiStreamClient {
             log.error("参数异常：EventSourceListener不能为空");
             throw new ParamBusinessException();
         }
-        if (StringUtils.isBlank(completion.getPrompt())) {
-            log.error("参数异常：Prompt不能为空");
-            throw new ParamBusinessException();
-        }
+//        if (StringUtils.isBlank(completion.getPrompt())) {
+//            log.error("参数异常：Prompt不能为空");
+//            throw new ParamBusinessException();
+//        }
         try {
             EventSource.Factory factory = EventSources.createFactory(this.okHttpClient);
             ObjectMapper mapper = new ObjectMapper();
@@ -124,10 +146,10 @@ public class RestAiStreamClient {
      * @param eventSourceListener
      */
     public void nonStreamCompletions(RestAiCompletion completion, EventSourceListener eventSourceListener) {
-        if (StringUtils.isBlank(completion.getPrompt())) {
-            log.error("参数异常：Prompt不能为空");
-            throw new ParamBusinessException();
-        }
+//        if (StringUtils.isBlank(completion.getPrompt())) {
+//            log.error("参数异常：Prompt不能为空");
+//            throw new ParamBusinessException();
+//        }
         try {
             ObjectMapper mapper = new ObjectMapper();
             mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -148,6 +170,7 @@ public class RestAiStreamClient {
                     try (ResponseBody responseBody = response.body()) {
                         if (responseBody != null) {
                             String content = responseBody.string();
+
                             eventSourceListener.onEvent(null, "[DATA]", null, content);
                             eventSourceListener.onEvent(null, "[DONE]", null, "[DONE]");
                         }

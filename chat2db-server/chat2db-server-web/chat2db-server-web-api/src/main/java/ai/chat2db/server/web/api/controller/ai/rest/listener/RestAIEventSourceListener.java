@@ -2,6 +2,10 @@ package ai.chat2db.server.web.api.controller.ai.rest.listener;
 
 import java.util.Objects;
 
+import ai.chat2db.server.web.api.controller.ai.response.ChatCompletionResponse;
+import ai.chat2db.server.web.api.controller.ai.response.SolarChatCompletionResponse;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.unfbx.chatgpt.entity.chat.Message;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -52,26 +56,33 @@ public class RestAIEventSourceListener extends EventSourceListener {
             sseEmitter.complete();
             return;
         }
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        SolarChatCompletionResponse solarResponse = mapper.readValue(data, SolarChatCompletionResponse.class);
+        // 读取Json
+        ChatCompletionResponse completionResponse = solarResponse.getResult();
+        String text = completionResponse.getChoices().get(0).getDelta() == null
+                ? completionResponse.getChoices().get(0).getMessage().getContent()
+                : completionResponse.getChoices().get(0).getDelta().getContent();
         Message message = new Message();
-        if (StringUtils.isNotBlank(data)) {
-            data = data.replaceAll("^\"|\"$", "");
-            data = data.replaceAll("\\\\n", "\n");
-            message.setContent(data);
+        if (text != null) {
+            message.setContent(text);
             sseEmitter.send(SseEmitter.event()
-                .id(id)
-                .data(message)
-                .reconnectTime(3000));
+                    .id(completionResponse.getId())
+                    .data(message)
+                    .reconnectTime(3000));
         }
     }
+
 
     @SneakyThrows
     @Override
     public void onClosed(EventSource eventSource) {
         log.info("REST AI关闭sse连接...");
-        sseEmitter.send(SseEmitter.event()
-            .id("[DONE]")
-            .data("[DONE]")
-            .reconnectTime(3000));
+//        sseEmitter.send(SseEmitter.event()
+//            .id("[DONE]")
+//            .data("[DONE]")
+//            .reconnectTime(3000));
         sseEmitter.complete();
     }
 

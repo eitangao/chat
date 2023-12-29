@@ -47,7 +47,7 @@ logging:
               mapper: debug
 
 chatgpt:
-  apiKey: sk-xxxx
+  apiKey: sk-BLUr5gnIfZDILkafNPHHNsC49e10Rfm0znbcQ6aUkSUNwVLE
   apiHost: https://api.openai.com/
   # 可以选择GPT3或GPT35
   version: GPT35

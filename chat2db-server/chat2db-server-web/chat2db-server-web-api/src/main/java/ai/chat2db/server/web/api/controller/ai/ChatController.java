@@ -235,6 +235,7 @@ public class ChatController {
             case CHAT2DBAI:
                 return chatWithChat2dbAi(queryRequest, sseEmitter, uid);
             case RESTAI :
+                return chatWithRestAi(queryRequest,sseEmitter,uid);
             case FASTCHATAI:
                 return chatWithFastChatAi(queryRequest, sseEmitter, uid);
             case AZUREAI :
@@ -263,6 +264,28 @@ public class ChatController {
     private SseEmitter chatWithRestAi(ChatQueryRequest prompt, SseEmitter sseEmitter) {
         RestAIEventSourceListener eventSourceListener = new RestAIEventSourceListener(sseEmitter);
         RestAIClient.getInstance().restCompletions(buildPrompt(prompt), eventSourceListener);
+        return sseEmitter;
+    }
+
+    private SseEmitter chatWithRestAi(ChatQueryRequest queryRequest, SseEmitter sseEmitter, String uid)
+            throws IOException {
+        String prompt = buildPrompt(queryRequest);
+        if (prompt.length() / TOKEN_CONVERT_CHAR_LENGTH > MAX_PROMPT_LENGTH) {
+            log.error("提示语超出最大长度:{}，输入长度:{}, 请重新输入", MAX_PROMPT_LENGTH,
+                    prompt.length() / TOKEN_CONVERT_CHAR_LENGTH);
+            throw new ParamBusinessException();
+        }
+
+        List<Message> messages = new ArrayList<>();
+        prompt = prompt.replaceAll("#", "");
+        log.info(prompt);
+        Message currentMessage = Message.builder().content(prompt).role(Message.Role.USER).build();
+        messages.add(currentMessage);
+        buildSseEmitter(sseEmitter, uid);
+
+        RestAIEventSourceListener eventSourceListener = new RestAIEventSourceListener(sseEmitter);
+        RestAIClient.getInstance().restCompletions(messages, eventSourceListener);
+        LocalCache.CACHE.put(uid, JSONUtil.toJsonStr(messages), LocalCache.TIMEOUT);
         return sseEmitter;
     }
 

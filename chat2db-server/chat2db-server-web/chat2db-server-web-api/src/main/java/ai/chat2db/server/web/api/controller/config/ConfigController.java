@@ -158,6 +158,9 @@ public class ConfigController {
         SystemConfigParam methodParam = SystemConfigParam.builder().code(RestAIClient.REST_AI_STREAM_OUT).content(
             request.getStream().toString()).build();
         configService.createOrUpdate(methodParam);
+        SystemConfigParam modelParam = SystemConfigParam.builder().code(RestAIClient.REST_AI_MODEL).content(
+                request.getModel()).build();
+        configService.createOrUpdate(modelParam);
         RestAIClient.refresh();
     }
 
@@ -332,9 +335,12 @@ public class ConfigController {
             case RESTAI:
                 DataResult<Config> restAiUrl = configService.find(RestAIClient.REST_AI_URL);
                 DataResult<Config> restAiHttpMethod = configService.find(RestAIClient.REST_AI_STREAM_OUT);
+                DataResult<Config> restAiModel = configService.find(RestAIClient.REST_AI_MODEL);
+
                 config.setApiHost(Objects.nonNull(restAiUrl.getData()) ? restAiUrl.getData().getContent() : "");
                 config.setStream(Objects.nonNull(restAiHttpMethod.getData()) ? Boolean.valueOf(
                     restAiHttpMethod.getData().getContent()) : Boolean.TRUE);
+                config.setModel(Objects.nonNull(restAiModel.getData()) ? restAiModel.getData().getContent() : null);
                 break;
             case FASTCHATAI:
                 DataResult<Config> fastChatApiKey = configService.find(FastChatAIClient.FASTCHAT_API_KEY);

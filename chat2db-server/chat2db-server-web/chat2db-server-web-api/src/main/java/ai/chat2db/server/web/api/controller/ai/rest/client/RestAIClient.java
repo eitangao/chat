@@ -25,6 +25,13 @@ public class RestAIClient {
     public static final String REST_AI_URL = "rest.ai.url";
 
     /**
+     * 自定义AI接口模型名称
+     */
+
+    public static final String REST_AI_MODEL = "rest.ai.model";
+
+
+    /**
      * 自定义AI接口请求方法
      */
     public static final String REST_AI_STREAM_OUT = "rest.ai.stream";
@@ -55,17 +62,23 @@ public class RestAIClient {
      */
     public static void refresh() {
         String apiUrl = "";
-        Boolean stream = Boolean.TRUE;
+        Boolean stream = Boolean.FALSE;
+        String model = "atom";
         ConfigService configService = ApplicationContextUtil.getBean(ConfigService.class);
         Config apiHostConfig = configService.find(REST_AI_URL).getData();
         if (apiHostConfig != null) {
-            apiUrl = apiHostConfig.getContent();
+            apiUrl = apiHostConfig.getContent()+"openai/v1/chat/completions";
         }
         Config config = configService.find(REST_AI_STREAM_OUT).getData();
         if (config != null) {
             stream = Boolean.valueOf(config.getContent());
         }
-        REST_AI_STREAM_CLIENT = new RestAiStreamClient(apiUrl, stream);
+        Config modelConfig = configService.find(REST_AI_MODEL).getData();
+        if(config!=null){
+            model = modelConfig.getContent();
+        }
+        stream=true;
+        REST_AI_STREAM_CLIENT = new RestAiStreamClient(apiUrl, stream,model);
     }
 
 }
